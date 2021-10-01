@@ -1,7 +1,7 @@
 
 // SVG drawing area
 
-var margin = {top: 40, right: 10, bottom: 60, left: 60};
+var margin = {top: 40, right: 10, bottom: 60, left: 100};
 
 var width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
@@ -9,8 +9,6 @@ var width = 960 - margin.left - margin.right,
 var svg = d3.select("#chart-area").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
-var group = svg.append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
 // Scales
@@ -20,6 +18,16 @@ var x = d3.scaleBand()
 
 var y = d3.scaleLinear()
     .range([height, 0]);
+
+var yscale = svg.append("g")
+var xscale = svg.append("g")
+
+var yAxisLabel = svg.append("text")
+	.attr("x", 20)
+	.attr("y", height / 2)
+	.attr("class", "label")
+	.attr("transform", "translate(-150,250) rotate("+270+")")
+	.text("Stores")
 
 
 // Initialize data
@@ -63,43 +71,65 @@ function loadData() {
 // Render visualization
 function updateVisualization() {
 
-  console.log(data);
-  var select = document.getElementById('ranking-type');
-  var valueSelected = select.options[select.selectedIndex].value;
-  x.domain(data.map(function (d){return d.company}));
-  y.domain(data.map(function (d){return d[valueSelected]}));
+
+	var select = document.getElementById('ranking-type');
+	var valueSelected = String(select.options[select.selectedIndex].value);
+	y.domain([0, d3.max(data, function (d) {
+		return d[valueSelected];
+	})])
+
+	data.sort(function(a, b) { return b[valueSelected] - a[valueSelected] });
+	x.domain(data.map(function (d){return d.company}));
+
 
   var xAxis = d3.axisBottom(x);
   var yAxis = d3.axisLeft(y);
   // Draw the axis
-	svg.append("g")
+	xscale
 		.attr("class", "axis x-axis")
-		.attr("transform", "translate(" + margin.top * 2.7 + "," + height + ")")
+		.attr("transform", "translate(" + margin.left + "," + height + ")")
+		.transition()
+		.duration(3000)
 		.call(xAxis);
-	svg.append("g")
+
+	yscale
 		.attr("class", "axis y-axis")
-		.attr("transform", "translate(" + (margin.left * 1.5) + "," + 0 + ")")
+		.attr("transform", "translate(" + margin.left + "," + 0 + ")")
+		.transition()
+		.duration(3000)
 		.call(yAxis);
 
-	data.sort(function(a, b) { return b.stores - a.stores; });
 
 	var selection = svg.selectAll("rect").data(data)
 
 	//enter:
 
 	selection.enter().append("rect")
-		.attr("x", function(d) { return x(d.company); })
-		.attr("y", function(d) { return y(d.stores); })
+		.attr("class", "bar")
+		.merge(selection)
+		.attr("x", function(d) { return x(d.company) + margin.left; })
 		.attr("width", x.bandwidth())
-		.attr("height", function(d) { return height - y(d.stores); })
-		.attr("class", "bar");
-
+		.transition()
+		.duration(3000)
+		.attr("y", function(d) { return y(d[valueSelected]); })
+		.attr("height", function(d) {
+			return height - y(d[valueSelected]); })
 
 	//exit:
 
-	selection.exit().remove();
+	selection.exit()
+		.remove();
 
+	//text:
+
+	if(valueSelected === "revenue"){
+		yAxisLabel
+			.text("Billion USD")
+
+	}
 
 
 
 }
+
+
